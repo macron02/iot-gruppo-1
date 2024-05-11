@@ -10,6 +10,9 @@ class FanController:
         """relay_pyn: pin per il controllo del relé che comanda l'accensione della ventola"""
         self.relay = Pin(relay_pin, Pin.OUT)
 
+    def check_fan():
+        return(relay_pin.value())
+    
     def start_fan(self):
         self.relay.value(1)  # Attiva il relé, quindi accende la ventola
     
