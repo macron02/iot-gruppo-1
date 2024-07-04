@@ -13,6 +13,7 @@ class ControlSoilSys:
         self.us_sensor = HCSR04.HCSR04(hcsr04_pin_echo,hcsr04_pin_trigger)
         self.btn_soil_mode = Pin(button_soil_pin, Pin.IN, Pin.PULL_DOWN)
         self.btn_soil_mode.irq(trigger=Pin.IRQ_RISING, handler=self.soil_mode_buttons)
+        self.moisture_level = [50,30,80]
 
     def click_pump(self, pin):
         self.pump.start_pump()
@@ -30,18 +31,25 @@ class ControlSoilSys:
             self.soil_mode += 1
         else:
             self.soil_mode = 1
+        self.select_soil_mode()
 
     def select_soil_mode(self):
         if self.soil_mode == 1:
-            self.soil_moisture = 50
+            self.moist_sens.set_ref_value_moisture(self.moisture_level[0])
         elif self.soil_mode == 2:
-            self.soil_moisture = 30
+            self.moist_sens.set_ref_value_moisture(self.moisture_level[1])
         elif self.soil_mode == 3:
-            self.soil_moisture = 80
+            self.moist_sens.set_ref_value_moisture(self.moisture_level[2])
 
-    def water(self):
+    def watering_plant(self):
         if self.us_sensor.distance_mm() > self.min_water:
             if self.moist_sens.read_moisture_value() < self.moist_sens.get_ref_value_moisture():
                 self.pump.start_pump()
                 time.sleep(3)
             self.pump.stop_pump()
+
+    def get_moist_sens(self):
+        return self.moist_sens
+
+    def get_soil_mode(self):
+        return self.soil_mode

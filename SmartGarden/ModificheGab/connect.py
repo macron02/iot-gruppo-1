@@ -18,41 +18,42 @@ MQTT_CLIENT_ID = "TDM's smart garden"
 MQTT_BROKER = "test.mosquitto.org"
 MQTT_PORT = 1883
 MQTT_KEEPALIVE = 60
-MQTT_TOPIC_TEMP = "g1/temperature"
-MQTT_TOPIC_HUMID = "g1/humidity"
+
+# TOPIC
 MQTT_TOPIC_SET_TEMP = "g1/set_temperature"
 MQTT_TOPIC_SET_HUMID = "g1/set_humidity"
-MQTT_TOPIC_DEF_TEMP = "g1/deftemperature"
-MQTT_TOPIC_DEF_HUMID = "g1/defhumidity"
+MQTT_TOPIC_SHOW_TEMP = "g1/show_temperature"
+MQTT_TOPIC_SHOW_HUMID = "g1/show_humidity"
+MQTT_TOPIC_SHOW_MOIST = "g1/show_moisture"
 
-DHT_PIN = 25
-LDR_PIN = 34
-ULTRASOUND_PIN1 = 26
-ULTRASOUND_PIN2 = 27
-M0ISTURE_SOIL_SENSOR_PIN = 13
-SCL_PIN = 22
-SDA_PIN = 21
-WATER_PIN = 19 #OUTPUT DI CONTROLLO DELLA POMPA DELL'ACQUA
-FAN_PIN = 18 #OUTPUT DI CONTROLLO PER LA VENTOLA
+DHT_PIN = 25 #
+LDR_PIN = 34 #
+ECHO_PIN = 26
+TRIG_PIN = 27
+M0ISTURE_SOIL_SENSOR_PIN = 13 #
+SCL_PIN = 22 #
+SDA_PIN = 21 #
+WATER_PIN = 19 #OUTPUT DI CONTROLLO DELLA POMPA DELL'ACQUA #
+FAN_PIN = 18 #OUTPUT DI CONTROLLO PER LA VENTOLA #
 SERVO_PIN = 2 #OUTPUT DI CONTROLLO DEL SERVO MOTORE
 
-LED_NIGHT_PIN = 4 #led notturno
+LED_NIGHT_PIN = 4 #led notturno #
 #Led di Allarme
-LED_BLUE1_PIN = 15
-LED_RED1_PIN = 0
-BUZZER_PIN = 16
-BUTTON_RESET_PIN = 35
-BUTTON_DISPLAY_PIN = 32
-BUTTON_PUMP = 33 #bottone per irrigare manualmente
-BUTTON_SOIL = 15 #CAMBIO MODALITà TERRENO
+LED_BLUE1_PIN = 5 #
+LED_RED1_PIN = 0 #
+BUZZER_PIN = 16 #
+BUTTON_RESET_PIN = 35 #
+BUTTON_DISPLAY_PIN = 32 #
+BUTTON_PUMP = 33 #bottone per irrigare manualmente #
+BUTTON_SOIL = 15 #CAMBIO MODALITà TERRENO #
 
 WATER_LEVEL_MIN = 2 """DA AGGIUNGERE""""
 
 habitat_param = MyDHT.MyDHT(DHT_PIN, FAN_PIN, SERVO_PIN)
 night_led = NightFarm.NightFarm(LED_NIGHT_PIN, LDR_PIN)
-moisture_soil_sens = ControlSoilSys.ControlSoilSys(M0ISTURE_SOIL_SENSOR_PIN,
+control_soil_sys = ControlSoilSys.ControlSoilSys(M0ISTURE_SOIL_SENSOR_PIN,
                                                 WATER_PIN,BUTTON_PUMP,BUTTON_SOIL,M0ISTURE_SOIL_SENSOR_PIN,
-                                                ULTRASOUND_PIN1,ULTRASOUND_PIN2, WATER_LEVEL_MIN)
+                                                ECHO_PIN,TRIG_PIN, WATER_LEVEL_MIN)
 allarme = Allarmed_system.Allarmed_system(BUZZER_PIN, LED_RED1_PIN, LED_BLUE1_PIN)
 menu = Menu.Menu(SDA_PIN, SCL_PIN, BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN)
 
@@ -94,12 +95,12 @@ def sub_cb(topic, msg):
 
     # Temperature constraint setting
     if topic_str == MQTT_TOPIC_SET_TEMP:
-        temp_constraint.set_value(float(msg_str))
+        temp_constraint.set_ref_value(float(msg_str))
         print("New default target temperature:", temp_constraint.get_value())
 
     # Humidity constraint setting
     elif topic_str == MQTT_TOPIC_SET_HUMID:
-        humid_constraint.set_value(float(msg_str))
+        humid_constraint.set_ref_value(float(msg_str))
         print("New default target humidity:", humid_constraint.get_value())
 
     else:
@@ -112,38 +113,73 @@ client.subscribe(MQTT_TOPIC_SET_TEMP)
 client.subscribe(MQTT_TOPIC_SET_HUMID)
 
 # Publish default target values to MQTT
-client.publish(MQTT_TOPIC_DEF_TEMP, ujson.dumps(temp_constraint.get_value()))
-client.publish(MQTT_TOPIC_DEF_HUMID, ujson.dumps(humid_constraint.get_value()))
+client.publish(MQTT_TOPIC_SHOW_TEMP, ujson.dumps(temp_constraint.get_value()))
+client.publish(MQTT_TOPIC_SHOW_HUMID, ujson.dumps(humid_constraint.get_value()))
 print("Default target temperature: {}°C".format(temp_constraint.get_value()))
 print("Default target humidity: {}%".format(humid_constraint.get_value()))
 
-
+menu.opening()
+time.sleep(5)
+menu.clear()
 habitat_param.measure()
+moist_sens = control_soil_sys.get_moist_sens()
+
 prev_temp = habitat_param.temperature()
-prev_humid = habitat_param.
+prev_humid = habitat_param.humidity()
+prev_moisture = moist_sens.read_moisture_value()
+prev_soil_mode = control_soil_sys.get_soil_mode()
+menu.soil_mode(prev_soil_mode)
 
 print("Measuring weather conditions... ", end="")
 
 while True:
+    night_led.night_light()
+    control_soil_sys.watering_plant()
+    habitat_param.checkGarden(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
+    habitat_status = habitat_param.get_habitat_status()
+    if( habitat_status["temp_status"] == 1 || habitat_status["humid_status"] == 1)
+        menu.display_allarmed(habitat_status)
+    else:
+        menu.display_data(habitat_status)
+
+    if prev_soil_mode != curr_soil_mode:
+        menu.soil_mode(curr_soil_mode)
+        prev_soil_mode = curr_soil_mode
+
     habitat_param.measure()
     curr_temp = habitat_param.temperature()  # Measured value from DHT22
     curr_humid = habitat_param.humidity()
+    curr_moist = moist_sens.read_moisture_value()
+    curr_soil_mode = control_soil_sys.get_soil_mode()
+
     message_temp = ujson.dumps(curr_temp)
     message_humid = ujson.dumps(curr_humid)
+    message_moist = ujson.dumps(curr_moist)
+
+
+
 
     # Publish temperature if it's changed
     if curr_temp != prev_temp:
         print("Updated temperature!")
-        print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_TEMP, message_temp))
-        client.publish(MQTT_TOPIC_TEMP, message_temp)
+        print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_TEMP, message_temp))
+        client.publish(MQTT_TOPIC_SHOW_TEMP, message_temp)
         prev_temp = curr_temp
 
     # Publish humidity if it's changed
     if curr_humid != prev_humid:
         print("Updated humidity!")
-        print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_HUMID, message_humid))
-        client.publish(MQTT_TOPIC_HUMID, message_humid)
+        print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_HUMID, message_humid))
+        client.publish(MQTT_TOPIC_SHOW_HUMID, message_humid)
         prev_humid = curr_humid
+
+    # Publish moisture if it's changed
+    if curr_moist != prev_moisture:
+            print("Updated moisture!")
+            print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_MOIST, message_moist))
+            client.publish(MQTT_TOPIC_SHOW_MOIST, message_moist)
+            prev_moisture = curr_moist
+
 
     # Check for messages from Node-RED
     try:

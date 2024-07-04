@@ -17,6 +17,9 @@ class MyDHT:
     def get_habitat_exception(self):
         return self.habitat_exception
 
+    def get_habitat_status(self):
+        return self.habitat_status
+
     def checkGarden(self, ref_temperature, ref_humidity):
         """
         Metodo per la misurazione e seguente check sui dati misurati

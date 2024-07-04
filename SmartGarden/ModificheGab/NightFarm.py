@@ -17,3 +17,6 @@ class NightFarm:
 
     def set_low_light_level(self, new_value):
         self.low_light_level = new_value
+
+    def get_low_light_level(self):
+        return low_light_level

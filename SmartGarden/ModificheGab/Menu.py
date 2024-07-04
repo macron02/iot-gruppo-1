@@ -81,13 +81,36 @@ class Menu:
 
         def opening(self):
             fb = framebuf.FrameBuffer(plant, 128, 64, framebuf.MONO_HLSB)
-            self.oled.fill(0)
+            self.clear()
             self.oled.blit(fb, 8, 0)
             self.oled.show()
-            time.sleep(5)
+
+        def connection_idle(self, isWiFi):
+            self.clear()
+            self.oled.text("Connecting",0,0)
+            if isWifi:
+                self.oled.text("to Wifi...",0,10)
+            else:
+                self.oled.text("to MQTT server...",0,10)
+            self.oled.show()
+
+        def connection_end_status(self, end_status):
+            self.clear()
+            self.oled.text("Connection",0,0)
+            if end_status:
+                self.oled.text("successful",0,10)
+            else:
+                self.oled.text("unsuccessful",0,10)
+            self.oled.show()
+
+
 
         def button_reset(self, pin):
             machine.reset()
+
+        def clear(self):
+            self.oled.fill(0)
+            self.oled.show()
 
         def display_mode_buttons(self, pin):
             current = time.ticks_ms()
@@ -95,7 +118,7 @@ class Menu:
             if delta < 200:
                 return
             self.last = current
-            if self.display_mode < 4:
+            if self.display_mode < 3:
                 self.display_mode += 1
             else:
                 self.display_mode = 1
@@ -104,7 +127,7 @@ class Menu:
         self.btn_display.irq(trigger=Pin.IRQ_RISING, handler=self.display_mode_buttons)
 
         def display_data(self, habitat_status):
-            self.oled.clear(0)
+            self.clear()
             if self.display_mode == 1:
                 self.oled.text('Temp: %s C' % habitat_status["temp_value"], 0, 0)
                 self.oled.text('Humidity: %s %%' % habitat_status["hum_value"], 0, 10)
@@ -115,7 +138,7 @@ class Menu:
             self.oled.show()
 
         def display_allarmed(self, habitat_status):
-            self.oled.clear(0)
+            self.clear()
             if habitat_status["temp_status"] == 1 and habitat_status["hum_status"] == 1:
                 self.oled.text('Ambiente ostile', 0, 0)
                 self.oled.text('Temp: %s C' % habitat_status["temp_value"], 0, 10)
@@ -139,7 +162,7 @@ class Menu:
                     3: '80 %%'
                 }
             if soil_mode in desired_humidity:
-                self.oled.clear(0)
+                self.clear()
                 self.oled.text('Umidità del terreno', 0, 0)
                 self.oled.text(f'desiderata: {desired_humidity[soil_mode]}', 0, 10)
                 self.oled.show()
