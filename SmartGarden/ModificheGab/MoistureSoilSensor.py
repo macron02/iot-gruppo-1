@@ -13,7 +13,14 @@ class MoistureSoilSensor:
         self.adc.width(ADC.WIDTH_12BIT)     # larghezza di banda
         self.min_moisture = min_value
         self.max_moisture = max_value
+        self.ref_value_moisture = 50
 
     def read_moisture_value(self):
         """Legge il valore di umidità del suolo e lo stampa in percentuale"""
         return ((self.max_moisture - self.adc.read()) * 100 / (self.max_moisture - self.min_moisture))
+
+    def get_ref_value_moisture(self):
+        return self.ref_value_moisture
+
+    def set_ref_value_moisture(self, new_moisture):
+        self.ref_value_moisture = new_moisture

@@ -8,6 +8,10 @@ class AllarmeHabitat:
                      Pin(blue_led_pin, Pin.OUT)]
 
     def attiva_allarme(self):
+        """
+        Manda il sistema in allarme per 5 secondi
+        iterando per due tonalità diverse di suono
+        """
         for i in range (0,12):
             """tono alto"""
             self.pwm_buzzer.freq(900)

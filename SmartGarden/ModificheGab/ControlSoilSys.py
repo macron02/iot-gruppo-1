@@ -1,23 +1,18 @@
 from machine import Pin
+import Pump, MoistureSoilSensor, HCSR04
 import time
-import Pump
-import MoistureSoilSensor
-import HCSR04
 
 class ControlSoilSys:
-    def __init__(self, relay_pin, button_pump_pin, button_soil_pin, moistur_soil_sensor_pin, hcsr04_pin_echo, hcsr04_pin_trigger, water_level):
+    def __init__(self, relay_pin, button_pump_pin, button_soil_pin, moisture_soil_sensor_pin, hcsr04_pin_echo, hcsr04_pin_trigger, water_level_min):
         self.pump = Pump.Pump(relay_pin)  # DA COMMENTARE
-        self.min_water = water_level # livello minimo di acqua richiesto per irrigare
+        self.min_water = water_level_min # livello minimo di acqua richiesto per irrigare
         self.btn_pump = Pin(button_pump_pin, Pin.IN, Pin.PULL_DOWN)
         self.btn_pump.irq(trigger=Pin.IRQ_RISING, handler=self.click_pump)
-        self.ms_sensor = MoistureSoilSensor.MoistureSoilSensor(moistur_soil_sensor_pin)
+        self.moist_sens = MoistureSoilSensor.MoistureSoilSensor(moisture_soil_sensor_pin)
         self.soil_mode = 1 #modalità default del suolo
-        self.soil_moisture = 50
         self.us_sensor = HCSR04.HCSR04(hcsr04_pin_echo,hcsr04_pin_trigger)
         self.btn_soil_mode = Pin(button_soil_pin, Pin.IN, Pin.PULL_DOWN)
         self.btn_soil_mode.irq(trigger=Pin.IRQ_RISING, handler=self.soil_mode_buttons)
-        self.last = time.ticks_ms()
-        self.delta = 0
 
     def click_pump(self, pin):
         self.pump.start_pump()
@@ -30,7 +25,7 @@ class ControlSoilSys:
         delta = time.ticks_diff(current, self.last)
         if delta < 200:
             return
-        self.last = current
+        last = current
         if self.soil_mode < 3:
             self.soil_mode += 1
         else:
@@ -46,7 +41,7 @@ class ControlSoilSys:
 
     def water(self):
         if self.us_sensor.distance_mm() > self.min_water:
-            if self.ms_sensor.checkSoil() < self.soil_moisture:
+            if self.moist_sens.read_moisture_value() < self.moist_sens.get_ref_value_moisture():
                 self.pump.start_pump()
                 time.sleep(3)
             self.pump.stop_pump()
