@@ -5,7 +5,7 @@ import FanController
 
 class MyDHT:
 
-    def __init__(self, dht_pin, fan_pin,servo_pin):
+    def __init__(self, dht_pin, fan_pin, servo_pin):
         self.sensor = dht.DHT22(Pin(dht_pin))
         self.fan = FanController.FanController(fan_pin,servo_pin)
         self.previous_humid = None
@@ -40,9 +40,6 @@ class MyDHT:
         else:
             print("Errore durante la lettura dei dati.")
         return self.habitat_status
-    
-
-
 
     def check_temp(self, temp_meas, ref_temperature):
         if temp_meas > ref_temperature:
@@ -51,13 +48,13 @@ class MyDHT:
                 Verifica se la temperatura è maggiore di quella desiderata
                 """
                 self.fan.start_fan()
-                
+
                 if temp_meas >= (ref_temperature * self.habitat_range_values[0]):
 
                     #Verifica se la temperatura è troppo maggiore di quella desiderata
-                    self.fan.start_fan_max()
+                    self.fan.start_fan()
                     self.habitat_status["temp_status"] = 1
-                
+
 
         elif temp_meas < (ref_temperature * self.habitat_range_values[2]):
             """

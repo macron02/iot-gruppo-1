@@ -1,6 +1,5 @@
-from machine import Pin
+from machine import Pin, ADC
 import time
-import machine
 
 class LDR:
     """Questa classe legge un valore da una resistenza dipendente dalla luce (LDR)"""
@@ -12,11 +11,7 @@ class LDR:
         self.adc = ADC(Pin(pin))
         self.min_value = min_value
         self.max_value = max_value
-            
-    def read(self):
-        """ Legge il valore analogico dal sensore LDR """
-        return self.adc.read()
-    
-    def value(self):
-        """ Calcola e restituisce il valore di luminosità normalizzato tra min_value e max_value """
-        return (self.max_value - self.min_value) * self.read() / 4095
+
+    def read_light_value(self):
+        """Legge il valore di umidità del suolo e lo stampa in percentuale"""
+        return ((self.max_value - self.adc.read()) * 100 / (self.max_value - self.min_value))

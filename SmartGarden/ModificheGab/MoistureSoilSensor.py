@@ -16,4 +16,4 @@ class MoistureSoilSensor:
 
     def read_moisture_value(self):
         """Legge il valore di umidità del suolo e lo stampa in percentuale"""
-        return (self.max_moisture - self.adc.read()) * 100 / (self.max_moisture - self.min_moisture)
+        return ((self.max_moisture - self.adc.read()) * 100 / (self.max_moisture - self.min_moisture))

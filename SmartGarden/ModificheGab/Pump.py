@@ -6,7 +6,7 @@ class Pump:
         self.relay = Pin(relay_pin, Pin.OUT)
 
     def start_pump(self):
-        self.relay.on()  # Attiva il relè per avviare la pompa
+        self.relay.off()  # Attiva il relè per avviare la pompa
 
     def stop_pump(self):
-        self.relay.off()  # Spegne il relè per avviare la pompa
+        self.relay.on()  # Spegne il relè per avviare la pompa

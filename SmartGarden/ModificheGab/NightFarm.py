@@ -10,7 +10,10 @@ class NightFarm:
         self.low_light_level = low_light_level
 
     def night_light(self):
-        if self.ldr.checkLight() < self.low_light_level:
+        if self.ldr.read_light_value() < self.low_light_level:
             self.night_led.on()
         else:
             self.night_led.off()
+
+    def set_low_light_level(self, new_value):
+        self.low_light_level = new_value
