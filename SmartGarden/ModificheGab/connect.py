@@ -59,6 +59,7 @@ menu = Menu.Menu(SDA_PIN, SCL_PIN, BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN)
 
 def connect_to_wifi():
     print("Connecting to WiFi", end="")
+    menu.connection_idle(True)
     sta_if = network.WLAN(network.STA_IF)
     sta_if.active(True)
     sta_if.connect('Wokwi-GUEST', '')
@@ -66,6 +67,7 @@ def connect_to_wifi():
         print(".", end="")
         time.sleep(0.1)
     print(" Connected to WiFi!")
+    menu.connection_end_status(True)
 
 def connect_to_mqtt():
     client = MQTTClient(MQTT_CLIENT_ID, MQTT_BROKER, port=MQTT_PORT, keepalive=MQTT_KEEPALIVE)
@@ -73,15 +75,20 @@ def connect_to_mqtt():
         try:
             client.connect()
             print("Connected to MQTT server!")
+            menu.connection_end_status(True)
             return client
         except OSError as e:
             print("Failed to connect to MQTT server, retrying in 5 seconds...")
+            menu.connection_end_status(False)
+            time.sleep(2)
+            menu.connection_retrying()
             time.sleep(5)
 
 # Connect to WiFi
 connect_to_wifi()
 
 # Connect to MQTT
+menu.connection_idle(False)
 client = connect_to_mqtt()
 
 # Funzione di callback per la gestione dei messaggi MQTT ricevuti

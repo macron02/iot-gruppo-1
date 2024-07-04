@@ -103,6 +103,12 @@ class Menu:
                 self.oled.text("unsuccessful",0,10)
             self.oled.show()
 
+        def connection_retrying(self):
+            self.clear()
+            self.oled.text("Another attempt to",0,0)
+            self.oled.text("MQTT server connection",0,10)
+            self.oled.text("in 5 seconds",0,20)
+            self.oled.clear()
 
 
         def button_reset(self, pin):
