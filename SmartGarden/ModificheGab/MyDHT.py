@@ -70,8 +70,6 @@ class MyDHT:
                 self.habitat_status["temp_status"] = 1
 
 
-
-
     def check_humid(self, humid_meas, ref_humidity):
         if humid_meas > ref_humidity:
             if humid_meas > (ref_humidity * self.habitat_range_values[1]):
@@ -94,3 +92,9 @@ class MyDHT:
                 Verifica se l'umidità è troppo inferiore a quella desiderata
                 """
                 self.habitat_status["hum_status"] = 1
+                
+    def get_temperature(self):
+        return self.sensor.temperature()
+    
+    def get_humidity(self):
+        return self.sensor.humidity()

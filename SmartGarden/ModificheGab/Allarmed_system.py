@@ -1,7 +1,7 @@
 from machine import Pin, PWM
 import time
 
-class AllarmeHabitat:
+class Allarmed_system:
     def __init__(self, pin_buzzer, red_led_pin, blue_led_pin):
         self.pwm_buzzer = PWM(Pin(pin_buzzer, Pin.OUT))
         self.leds = [Pin(red_led_pin, Pin.OUT),

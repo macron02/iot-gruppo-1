@@ -5,15 +5,21 @@ from machine import Pin, I2C
 import framebuf
 
 class Menu:
-    def __init__(self, sda_pin, scl_pin, button_display, button_reset):
-        self.oled = ssd1306.SSD1306_I2C(128, 64, I2C(0, scl=Pin(scl_pin), sda=Pin(sda_pin)))
+    def __init__(self, button_display, button_reset, sda_pin=21, scl_pin=22,):
+        i2c = I2C(0, scl=Pin(scl_pin), sda=Pin(sda_pin))
+        oled_width = 128
+        oled_height = 64
+        self.oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
         self.btn_display = Pin(button_display, Pin.IN, Pin.PULL_DOWN)
         self.btn_reset = Pin(button_reset, Pin.IN, Pin.PULL_DOWN)
         self.last = 0
         self.display_mode = 1
-
         self.btn_reset.irq(trigger=Pin.IRQ_RISING, handler=self.button_reset_handler)
         self.btn_display.irq(trigger=Pin.IRQ_RISING, handler=self.display_mode_buttons)
+            
+    def clear(self):
+        self.oled.fill(0)
+        self.oled.show()
 
     def opening(self):
         fb = framebuf.FrameBuffer(self.get_plant_img(), 128, 64, framebuf.MONO_HLSB)
@@ -48,10 +54,6 @@ class Menu:
 
     def button_reset_handler(self, pin):
         machine.reset()
-
-    def clear(self):
-        self.oled.fill(0)
-        self.oled.show()
 
     def display_mode_buttons(self, pin):
         current = time.ticks_ms()

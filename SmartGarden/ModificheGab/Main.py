@@ -5,13 +5,13 @@ import dht
 import ujson
 from umqtt.simple import MQTTClient
 import constraint_domain
-import Allarmed_system, ControlSoilSys, Menu, NightFarm
+import Allarmed_system, ControlSoilSys, Menu, NightFarm, MyDHT
 
 # Definizione dei vincoli dei valori ambientali da rilevare
 # Per la temperatura, range 5°C - 35°C, valore riferimento 18°C
-temp_constraint = constraint_domain.constraint_domain(18, 5, 35)
+temp_constraint = constraint_domain.constraint_domain(18, 35, 5)
 # Per l'umidità dell'aria, range 10% - 90%, valore riferimento 40%
-humid_constraint = constraint_domain.constraint_domain(40, 10, 90)
+humid_constraint = constraint_domain.constraint_domain(40, 90, 10)
 
 # MQTT Server Parameters
 MQTT_CLIENT_ID = "TDM's smart garden"
@@ -30,7 +30,7 @@ DHT_PIN = 25 #
 LDR_PIN = 34 #
 ECHO_PIN = 26
 TRIG_PIN = 27
-M0ISTURE_SOIL_SENSOR_PIN = 13 #
+M0ISTURE_SOIL_SENSOR_PIN = 14 #
 SCL_PIN = 22 #
 SDA_PIN = 21 #
 WATER_PIN = 19 #OUTPUT DI CONTROLLO DELLA POMPA DELL'ACQUA #
@@ -45,24 +45,21 @@ BUZZER_PIN = 16 #
 BUTTON_RESET_PIN = 35 #
 BUTTON_DISPLAY_PIN = 32 #
 BUTTON_PUMP = 33 #bottone per irrigare manualmente #
-BUTTON_SOIL = 15 #CAMBIO MODALITà TERRENO #
 
-WATER_LEVEL_MIN = 2 """DA AGGIUNGERE""""
+WATER_LEVEL_MIN = 20
 
 habitat_param = MyDHT.MyDHT(DHT_PIN, FAN_PIN, SERVO_PIN)
 night_led = NightFarm.NightFarm(LED_NIGHT_PIN, LDR_PIN)
-control_soil_sys = ControlSoilSys.ControlSoilSys(M0ISTURE_SOIL_SENSOR_PIN,
-                                                WATER_PIN,BUTTON_PUMP,BUTTON_SOIL,M0ISTURE_SOIL_SENSOR_PIN,
-                                                ECHO_PIN,TRIG_PIN, WATER_LEVEL_MIN)
+control_soil_sys = ControlSoilSys.ControlSoilSys(WATER_PIN,BUTTON_PUMP,M0ISTURE_SOIL_SENSOR_PIN,ECHO_PIN,TRIG_PIN, WATER_LEVEL_MIN)
 allarme = Allarmed_system.Allarmed_system(BUZZER_PIN, LED_RED1_PIN, LED_BLUE1_PIN)
-menu = Menu.Menu(SDA_PIN, SCL_PIN, BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN)
+menu = Menu.Menu(BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN, SDA_PIN, SCL_PIN)
 
 def connect_to_wifi():
     print("Connecting to WiFi", end="")
     menu.connection_idle(True)
     sta_if = network.WLAN(network.STA_IF)
     sta_if.active(True)
-    sta_if.connect('Wokwi-GUEST', '')
+    sta_if.connect('Tuttappost', 'Calamarata')
     while not sta_if.isconnected():
         print(".", end="")
         time.sleep(0.1)
@@ -120,22 +117,20 @@ client.subscribe(MQTT_TOPIC_SET_TEMP)
 client.subscribe(MQTT_TOPIC_SET_HUMID)
 
 # Publish default target values to MQTT
-client.publish(MQTT_TOPIC_SHOW_TEMP, ujson.dumps(temp_constraint.get_value()))
-client.publish(MQTT_TOPIC_SHOW_HUMID, ujson.dumps(humid_constraint.get_value()))
-print("Default target temperature: {}°C".format(temp_constraint.get_value()))
-print("Default target humidity: {}%".format(humid_constraint.get_value()))
+client.publish(MQTT_TOPIC_SHOW_TEMP, ujson.dumps(temp_constraint.get_ref_value()))
+client.publish(MQTT_TOPIC_SHOW_HUMID, ujson.dumps(humid_constraint.get_ref_value()))
+print("Default target temperature: {}°C".format(temp_constraint.get_ref_value()))
+print("Default target humidity: {}%".format(humid_constraint.get_ref_value()))
 
 menu.opening()
 time.sleep(5)
 menu.clear()
-habitat_param.measure()
+habitat_param.checkGarden(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
 moist_sens = control_soil_sys.get_moist_sens()
 
-prev_temp = habitat_param.temperature()
-prev_humid = habitat_param.humidity()
-prev_moisture = moist_sens.read_moisture_value()
-prev_soil_mode = control_soil_sys.get_soil_mode()
-menu.soil_mode(prev_soil_mode)
+prev_temp = habitat_param.get_temperature()
+prev_humid = habitat_param.get_humidity()
+#prev_moisture = moist_sens.read_moisture_value()
 
 print("Measuring weather conditions... ", end="")
 
@@ -144,25 +139,19 @@ while True:
     control_soil_sys.watering_plant()
     habitat_param.checkGarden(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
     habitat_status = habitat_param.get_habitat_status()
-    if( habitat_status["temp_status"] == 1 || habitat_status["humid_status"] == 1)
+    if (habitat_status["temp_status"] == 1 or habitat_status["hum_status"] == 1):
         menu.display_allarmed(habitat_status)
     else:
         menu.display_data(habitat_status)
 
-    if prev_soil_mode != curr_soil_mode:
-        menu.soil_mode(curr_soil_mode)
-        prev_soil_mode = curr_soil_mode
-
-    habitat_param.measure()
+    habitat_param.checkGarden()
     curr_temp = habitat_param.temperature()  # Measured value from DHT22
     curr_humid = habitat_param.humidity()
     curr_moist = moist_sens.read_moisture_value()
-    curr_soil_mode = control_soil_sys.get_soil_mode()
 
     message_temp = ujson.dumps(curr_temp)
     message_humid = ujson.dumps(curr_humid)
     message_moist = ujson.dumps(curr_moist)
-
 
 
 
