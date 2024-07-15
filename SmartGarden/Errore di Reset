@@ -1,0 +1,9 @@
+rst:0xc (SW_CPU_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)
+configsip: 0, SPIWP:0xee
+clk_drv:0x00,q_drv:0x00,d_drv:0x00,cs0_drv:0x00,hd_drv:0x00,wp_drv:0x00
+mode:DIO, clock div:2
+load:0x3fff0030,len:4728
+load:0x40078000,len:14888
+load:0x40080400,len:3368
+entry 0x400805cc
+MicroPython v1.22.2 on 2024-02-22; Generic ESP32 module with ESP32

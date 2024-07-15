@@ -5,15 +5,18 @@ import dht
 import ujson
 from umqtt.simple import MQTTClient
 import constraint_domain
-import Allarmed_system, ControlSoilSys, Menu, NightFarm, MyDHT
+import control_soil_sys, menu_system, habitat, plant, night_farm
+
+# Oggetto pianta
+my_plant = plant.plant()
 
 # Definizione dei vincoli dei valori ambientali da rilevare
 # Per la temperatura, range 5°C - 35°C, valore riferimento 18°C
-temp_constraint = constraint_domain.constraint_domain(18, 35, 5)
+temp_constraint = constraint_domain.constraint_domain(my_plant.get_plant_temp(), 35, 5)
 # Per l'umidità dell'aria, range 10% - 90%, valore riferimento 40%
-humid_constraint = constraint_domain.constraint_domain(40, 90, 10)
+humid_constraint = constraint_domain.constraint_domain(my_plant.get_plant_hum(), 90, 10)
 
-# MQTT Server Parameters
+# Parametri del server MQTT
 MQTT_CLIENT_ID = "TDM's smart garden"
 MQTT_BROKER = "test.mosquitto.org"
 MQTT_PORT = 1883
@@ -26,33 +29,29 @@ MQTT_TOPIC_SHOW_TEMP = "g1/show_temperature"
 MQTT_TOPIC_SHOW_HUMID = "g1/show_humidity"
 MQTT_TOPIC_SHOW_MOIST = "g1/show_moisture"
 
-DHT_PIN = 25 #
-LDR_PIN = 34 #
+# Lista dei Pin
+DHT_PIN = 25
+LDR_PIN = 34
 ECHO_PIN = 26
 TRIG_PIN = 27
-M0ISTURE_SOIL_SENSOR_PIN = 14 #
-SCL_PIN = 22 #
-SDA_PIN = 21 #
-WATER_PIN = 19 #OUTPUT DI CONTROLLO DELLA POMPA DELL'ACQUA #
-FAN_PIN = 18 #OUTPUT DI CONTROLLO PER LA VENTOLA #
-SERVO_PIN = 2 #OUTPUT DI CONTROLLO DEL SERVO MOTORE
+M0ISTURE_SOIL_SENSOR_PIN = 14
+SCL_PIN = 22
+SDA_PIN = 21
+WATER_PIN = 19
+FAN_PIN = 18
+SERVO_PIN = 2
+LED_NIGHT_PIN = 4
+LED_BLUE1_PIN = 5
+LED_RED1_PIN = 0
+BUZZER_PIN = 16
+BUTTON_RESET_PIN = 35
+BUTTON_DISPLAY_PIN = 32
+BUTTON_PUMP = 33
 
-LED_NIGHT_PIN = 4 #led notturno #
-#Led di Allarme
-LED_BLUE1_PIN = 5 #
-LED_RED1_PIN = 0 #
-BUZZER_PIN = 16 #
-BUTTON_RESET_PIN = 35 #
-BUTTON_DISPLAY_PIN = 32 #
-BUTTON_PUMP = 33 #bottone per irrigare manualmente #
-
-WATER_LEVEL_MIN = 20
-
-habitat_param = MyDHT.MyDHT(DHT_PIN, FAN_PIN, SERVO_PIN)
-night_led = NightFarm.NightFarm(LED_NIGHT_PIN, LDR_PIN)
-control_soil_sys = ControlSoilSys.ControlSoilSys(WATER_PIN,BUTTON_PUMP,M0ISTURE_SOIL_SENSOR_PIN,ECHO_PIN,TRIG_PIN, WATER_LEVEL_MIN)
-allarme = Allarmed_system.Allarmed_system(BUZZER_PIN, LED_RED1_PIN, LED_BLUE1_PIN)
-menu = Menu.Menu(BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN, SDA_PIN, SCL_PIN)
+habitat_param = habitat.habitat(DHT_PIN, FAN_PIN, SERVO_PIN)
+night_led = night_farm.night_farm(LED_NIGHT_PIN, LDR_PIN)
+control_soil_sys = control_soil_sys.control_soil_sys(WATER_PIN, BUTTON_PUMP, M0ISTURE_SOIL_SENSOR_PIN, ECHO_PIN, TRIG_PIN, WATER_LEVEL_MIN)
+menu = menu_system.menu_system(BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN, SDA_PIN, SCL_PIN, BUZZER_PIN, LED_RED1_PIN, LED_BLUE1_PIN)
 
 def connect_to_wifi():
     print("Connecting to WiFi", end="")
@@ -81,42 +80,34 @@ def connect_to_mqtt():
             menu.connection_retrying()
             time.sleep(5)
 
-# Connect to WiFi
+# Connessione WiFi
 connect_to_wifi()
-
-# Connect to MQTT
 menu.connection_idle(False)
+
+# Connessione al server MQTT
 client = connect_to_mqtt()
 
 # Funzione di callback per la gestione dei messaggi MQTT ricevuti
 def sub_cb(topic, msg):
-    # Decode the incoming message and topic from bytes to string
     msg_str = msg.decode('utf-8')
     topic_str = topic.decode('utf-8')
-
-    # Print the decoded topic and message for debugging
     print(f"Received message: '{msg_str}' on topic: '{topic_str}'")
 
-    # Temperature constraint setting
     if topic_str == MQTT_TOPIC_SET_TEMP:
         temp_constraint.set_ref_value(float(msg_str))
         print("New default target temperature:", temp_constraint.get_value())
-
-    # Humidity constraint setting
     elif topic_str == MQTT_TOPIC_SET_HUMID:
         humid_constraint.set_ref_value(float(msg_str))
         print("New default target humidity:", humid_constraint.get_value())
-
     else:
         print(f"Invalid topic: '{topic_str}'")
 
-
-# Set the callback
+# Configurazione della callback e iscrizione ai topic MQTT
 client.set_callback(sub_cb)
 client.subscribe(MQTT_TOPIC_SET_TEMP)
 client.subscribe(MQTT_TOPIC_SET_HUMID)
 
-# Publish default target values to MQTT
+# Pubblicazione dei valori di riferimento iniziali
 client.publish(MQTT_TOPIC_SHOW_TEMP, ujson.dumps(temp_constraint.get_ref_value()))
 client.publish(MQTT_TOPIC_SHOW_HUMID, ujson.dumps(humid_constraint.get_ref_value()))
 print("Default target temperature: {}°C".format(temp_constraint.get_ref_value()))
@@ -126,67 +117,64 @@ menu.opening()
 time.sleep(5)
 menu.clear()
 
-habitat_param.checkGarden(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
+# Misura delle condizioni iniziali
+habitat_param.check_habitat_status(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
 moist_sens = control_soil_sys.get_moist_sens()
 
-prev_temp = habitat_param.get_temperature()
-prev_humid = habitat_param.get_humidity()
-#prev_moisture = moist_sens.read_moisture_value()
+prev_temp = habitat_param.get_habitat_temperature()
+prev_humid = habitat_param.get_habitat_humidity()
+# prev_moisture = moist_sens.read_moisture_value()
 
 print("Measuring weather conditions... ", end="")
 
 while True:
-
+    # Controllo delle luci notturne
     night_led.night_light()
 
+    # Controllo dell'irrigazione
     control_soil_sys.watering_plant()
 
-    habitat_param.checkGarden(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
-
+    # Misura delle condizioni attuali e aggiornamento dello stato dell'habitat
+    habitat_param.check_habitat_status(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
     habitat_status = habitat_param.get_habitat_status()
 
-    if (habitat_status["temp_status"] == 1 or habitat_status["hum_status"] == 1):
+    # Visualizzazione dello stato dell'habitat
+    if habitat_status["temp_status"] == 1 or habitat_status["hum_status"] == 1:
         menu.display_allarmed(habitat_status)
     else:
         menu.display_data(habitat_status)
 
-    habitat_param.checkGarden()
-
-    curr_temp = habitat_param.get_temperature()  # Measured value from DHT22
-
-    curr_humid = habitat_param.get_humidity()
-
+    # Pubblicazione delle misure su MQTT
+    curr_temp = habitat_param.get_habitat_temperature()
+    curr_humid = habitat_param.get_habitat_humidity()
     curr_moist = moist_sens.read_moisture_value()
 
     message_temp = ujson.dumps(curr_temp)
     message_humid = ujson.dumps(curr_humid)
     message_moist = ujson.dumps(curr_moist)
 
-
-
-    # Publish temperature if it's changed
+    # Pubblica la temperatura se è cambiata
     if curr_temp != prev_temp:
         print("Updated temperature!")
         print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_TEMP, message_temp))
         client.publish(MQTT_TOPIC_SHOW_TEMP, message_temp)
         prev_temp = curr_temp
 
-    # Publish humidity if it's changed
+    # Pubblica l'umidità se è cambiata
     if curr_humid != prev_humid:
         print("Updated humidity!")
         print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_HUMID, message_humid))
         client.publish(MQTT_TOPIC_SHOW_HUMID, message_humid)
         prev_humid = curr_humid
 
-    # Publish moisture if it's changed
+    # Pubblica l'umidità del terreno se è cambiata
     if curr_moist != prev_moisture:
-            print("Updated moisture!")
-            print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_MOIST, message_moist))
-            client.publish(MQTT_TOPIC_SHOW_MOIST, message_moist)
-            prev_moisture = curr_moist
+        print("Updated moisture!")
+        print("Reporting to MQTT topic {}: {}".format(MQTT_TOPIC_SHOW_MOIST, message_moist))
+        client.publish(MQTT_TOPIC_SHOW_MOIST, message_moist)
+        prev_moisture = curr_moist
 
-
-    # Check for messages from Node-RED
+    # Controlla i messaggi MQTT in arrivo
     try:
         client.check_msg()
     except OSError as e:
