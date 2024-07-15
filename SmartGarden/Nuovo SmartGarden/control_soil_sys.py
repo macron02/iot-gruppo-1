@@ -31,8 +31,5 @@ class control_soil_sys:
                 time.sleep(3)
             self.pump.stop_pump()
 
-"""
     def get_moist_sens(self):
-        return self.moist_sens
-    #a che serviva??
-"""
+        return self.moist_sens.soil_condition()

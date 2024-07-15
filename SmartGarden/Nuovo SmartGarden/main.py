@@ -129,7 +129,7 @@ print("Measuring weather conditions... ", end="")
 
 while True:
     # Controllo delle luci notturne
-    night_led.night_light()
+    night_led.check_night()
 
     # Controllo dell'irrigazione
     control_soil_sys.watering_plant()

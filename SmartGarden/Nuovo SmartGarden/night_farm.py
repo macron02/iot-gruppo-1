@@ -14,9 +14,3 @@ class night_farm:
             self.night_led.on()
         else:
             self.night_led.off()
-
-    def set_low_light_level(self, new_value):
-        self.low_light_level = new_value
-
-    def get_low_light_level(self):
-        return self.low_light_level

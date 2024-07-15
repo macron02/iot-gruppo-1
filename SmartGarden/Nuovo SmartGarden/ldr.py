@@ -1,7 +1,7 @@
 from machine import Pin, ADC
 import time
 
-class LDR:
+class ldr:
     """Questa classe legge un valore da una resistenza dipendente dalla luce (LDR)"""
     def __init__(self, pin, min_value=0, max_value=100):
         """ Controlla che il valore minimo sia inferiore al valore massimo """

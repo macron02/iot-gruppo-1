@@ -3,7 +3,7 @@ import dht
 import time
 import fan_controller
 
-class Habitat:
+class habitat:
 
     def __init__(self, dht_pin, fan_pin, servo_pin):
         self.sensor = dht.DHT22(Pin(dht_pin))
