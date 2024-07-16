@@ -123,7 +123,7 @@ moist_sens = control_soil_sys.get_moist_sens()
 
 prev_temp = habitat_param.get_habitat_temperature()
 prev_humid = habitat_param.get_habitat_humidity()
-# prev_moisture = moist_sens.read_moisture_value()
+prev_moisture = moist_sens.read_moisture_value()
 
 print("Measuring weather conditions... ", end="")
 
@@ -148,6 +148,7 @@ while True:
     curr_temp = habitat_param.get_habitat_temperature()
     curr_humid = habitat_param.get_habitat_humidity()
     curr_moist = moist_sens.read_moisture_value()
+    """chiedere a rago"""
 
     message_temp = ujson.dumps(curr_temp)
     message_humid = ujson.dumps(curr_humid)

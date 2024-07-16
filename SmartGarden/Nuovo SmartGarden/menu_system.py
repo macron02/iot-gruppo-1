@@ -1,23 +1,37 @@
 import machine
 import ssd1306
 import time
-from machine import Pin, I2C
+from machine import Pin, I2C, PWM
 import framebuf
 
 class menu_system:
-    def __init__(self, button_display, button_reset, sda_pin=21, scl_pin=22, pin_buzzer, red_led_pin, blue_led_pin):
+    def __init__(self, button_display, button_reset, sda_pin=21, scl_pin=22, pin_buzzer=None, red_led_pin=None, blue_led_pin=None):
+        # Inizializzazione I2C e OLED
         i2c = I2C(0, scl=Pin(scl_pin), sda=Pin(sda_pin))
         oled_width = 128
         oled_height = 64
         self.oled = ssd1306.SSD1306_I2C(oled_width, oled_height, i2c)
+
+        # Pulsanti
         self.btn_display = Pin(button_display, Pin.IN, Pin.PULL_DOWN)
         self.btn_reset = Pin(button_reset, Pin.IN, Pin.PULL_DOWN)
         self.last = 0
         self.display_mode = 1
+
+        # Interrupt Pulsanti
         self.btn_reset.irq(trigger=Pin.IRQ_RISING, handler=self.button_reset_handler)
         self.btn_display.irq(trigger=Pin.IRQ_RISING, handler=self.display_mode_buttons)
-        self.pwm_buzzer = PWM(Pin(pin_buzzer, Pin.OUT))
-        self.leds = [Pin(red_led_pin, Pin.OUT), Pin(blue_led_pin, Pin.OUT)]
+
+        # Buzzer e LED
+        if pin_buzzer is not None:
+            self.pwm_buzzer = PWM(Pin(pin_buzzer, Pin.OUT))
+        else:
+            self.pwm_buzzer = None
+        self.leds = []
+        if red_led_pin is not None:
+            self.leds.append(Pin(red_led_pin, Pin.OUT))
+        if blue_led_pin is not None:
+            self.leds.append(Pin(blue_led_pin, Pin.OUT))
 
     def clear(self):
         self.oled.fill(0)
@@ -81,21 +95,25 @@ class menu_system:
 
     def attiva_allarme(self):
         """
-        Manda il sistema in allarme per 5 secondi
+        Manda il sistema in allarme per 3.2 secondi
         iterando per due tonalità diverse di suono
         """
-        for i in range (0,8):
-            """for i in range (0,8) serve a far durare il ciclo circa 3,2 secondi"""
-            """tono alto"""
-            self.pwm_buzzer.freq(900)
-            self.leds[0].on()
-            self.leds[1].off()
-            time.sleep(0.2)  # Durata del tono alto
-            """tono basso"""
-            self.pwm_buzzer.freq(450)
-            self.leds[0].off()
-            self.leds[1].on()
-            time.sleep(0.2) # Durata del tono basso
+        if self.pwm_buzzer is not None:
+            for i in range(8):
+                # Tono alto
+                self.pwm_buzzer.freq(900)
+                if self.leds:
+                    self.leds[0].on()
+                    if len(self.leds) > 1:
+                        self.leds[1].off()
+                time.sleep(0.2)  # Durata del tono alto
+                # Tono basso
+                self.pwm_buzzer.freq(450)
+                if self.leds:
+                    self.leds[0].off()
+                    if len(self.leds) > 1:
+                        self.leds[1].on()
+                time.sleep(0.2)  # Durata del tono basso
 
     def display_allarmed(self, habitat_status):
         self.clear()
