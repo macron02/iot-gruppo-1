@@ -34,7 +34,7 @@ DHT_PIN = 25
 LDR_PIN = 34
 ECHO_PIN = 26
 TRIG_PIN = 27
-M0ISTURE_SOIL_SENSOR_PIN = 13
+M0ISTURE_SOIL_SENSOR_PIN = 12
 SCL_PIN = 22
 SDA_PIN = 21
 WATER_PIN = 19
@@ -48,16 +48,12 @@ BUTTON_RESET_PIN = 35
 BUTTON_DISPLAY_PIN = 32
 BUTTON_PUMP = 33
 WATER_LEVEL_MIN = 20
+
 print("target 1")
 
-habitat_param = habitat.habitat(DHT_PIN, FAN_PIN, SERVO_PIN)
-print("target 1.1")
-night_led = night_farm.night_farm(LED_NIGHT_PIN, LDR_PIN)
-print("target 1.2")
-control_soil_sys = control_soil_sys.control_soil_sys(WATER_PIN, BUTTON_PUMP, M0ISTURE_SOIL_SENSOR_PIN, ECHO_PIN, TRIG_PIN, WATER_LEVEL_MIN)
-print("target 1.3")
 menu = menu_system.menu_system(BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN, SDA_PIN, SCL_PIN, BUZZER_PIN, LED_RED1_PIN, LED_BLUE1_PIN)
-print("target 1.4")
+
+print("target 1.1")
 
 def connect_to_wifi():
     print("Connecting to WiFi", end="")
@@ -124,10 +120,20 @@ menu.opening()
 time.sleep(5)
 menu.clear()
 
+habitat_param = habitat.habitat(DHT_PIN, FAN_PIN, SERVO_PIN)
+
+night_led = night_farm.night_farm(LED_NIGHT_PIN, LDR_PIN)
+print("target 1.2")
+
+control_soil_sys = control_soil_sys.control_soil_sys(WATER_PIN, BUTTON_PUMP, M0ISTURE_SOIL_SENSOR_PIN, ECHO_PIN, TRIG_PIN, WATER_LEVEL_MIN)
+
+print("target 1.3")
+
+print("target 1.4")
+
 # Misura delle condizioni iniziali
 habitat_param.check_habitat_status(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
 moist_sens = control_soil_sys.get_moist_sens()
-
 prev_temp = habitat_param.get_habitat_temperature()
 prev_humid = habitat_param.get_habitat_humidity()
 prev_moisture = control_soil_sys.get_moist_sens()
@@ -157,11 +163,10 @@ while True:
     curr_temp = habitat_param.get_habitat_temperature()
     curr_humid = habitat_param.get_habitat_humidity()
     curr_moist = moist_sens.read_moisture_value()
-    """chiedere a rago"""
 
-    #message_temp = ujson.dumps(curr_temp)
-    #message_humid = ujson.dumps(curr_humid)
-    #message_moist = ujson.dumps(curr_moist)
+    message_temp = ujson.dumps(curr_temp)
+    message_humid = ujson.dumps(curr_humid)
+    message_moist = ujson.dumps(curr_moist)
 
     # Pubblica la temperatura se è cambiata
     if curr_temp != prev_temp:
