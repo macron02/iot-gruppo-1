@@ -29,3 +29,7 @@ class FanController:
         self.relay.on()
         time.sleep(1)
         self.set_angle(0)
+
+
+    def is_fan_active(self):
+        return self.fan_active

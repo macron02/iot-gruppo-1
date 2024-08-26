@@ -28,17 +28,13 @@ MQTT_TOPIC_SET_HUMID = "g1/set_humidity"
 MQTT_TOPIC_SHOW_TEMP = "g1/show_temperature"
 MQTT_TOPIC_SHOW_HUMID = "g1/show_humidity"
 MQTT_TOPIC_SHOW_MOIST = "g1/show_moisture"
-MQTT_TOPIC_WATER_LEV = "g1/water_level"
-MQTT_TOPIC_FAN_ACT = "g1/fan_activation"
-MQTT_TOPIC_CHECK_HUM = "g1/check_humidity"
-MQTT_TOPIC_CHECK_TEMP = "g1/check_temperature"
 
 # Lista dei Pin
 DHT_PIN = 25
 LDR_PIN = 34
 ECHO_PIN = 26
 TRIG_PIN = 27
-M0ISTURE_SOIL_SENSOR_PIN = 14
+M0ISTURE_SOIL_SENSOR_PIN = 12
 SCL_PIN = 22
 SDA_PIN = 21
 WATER_PIN = 19
@@ -46,16 +42,18 @@ FAN_PIN = 18
 SERVO_PIN = 2
 LED_NIGHT_PIN = 4
 LED_BLUE1_PIN = 5
-LED_RED1_PIN = 0
+LED_RED1_PIN = 15
 BUZZER_PIN = 16
 BUTTON_RESET_PIN = 35
 BUTTON_DISPLAY_PIN = 32
 BUTTON_PUMP = 33
+WATER_LEVEL_MIN = 20
 
-habitat_param = habitat.habitat(DHT_PIN, FAN_PIN, SERVO_PIN)
-night_led = night_farm.night_farm(LED_NIGHT_PIN, LDR_PIN)
-control_soil_sys = control_soil_sys.control_soil_sys(WATER_PIN, BUTTON_PUMP, M0ISTURE_SOIL_SENSOR_PIN, ECHO_PIN, TRIG_PIN, WATER_LEVEL_MIN)
+print("target 1")
+
 menu = menu_system.menu_system(BUTTON_DISPLAY_PIN, BUTTON_RESET_PIN, SDA_PIN, SCL_PIN, BUZZER_PIN, LED_RED1_PIN, LED_BLUE1_PIN)
+
+print("target 1.1")
 
 def connect_to_wifi():
     print("Connecting to WiFi", end="")
@@ -105,8 +103,9 @@ def sub_cb(topic, msg):
         print("New default target humidity:", humid_constraint.get_value())
     else:
         print(f"Invalid topic: '{topic_str}'")
+print("target 2")
 
-# Configurazione della callback e iscrizione ai topic MQTT
+#Configurazione della callback e iscrizione ai topic MQTT
 client.set_callback(sub_cb)
 client.subscribe(MQTT_TOPIC_SET_TEMP)
 client.subscribe(MQTT_TOPIC_SET_HUMID)
@@ -121,33 +120,29 @@ menu.opening()
 time.sleep(5)
 menu.clear()
 
+habitat_param = habitat.habitat(DHT_PIN, FAN_PIN, SERVO_PIN)
+
+night_led = night_farm.night_farm(LED_NIGHT_PIN, LDR_PIN)
+print("target 1.2")
+
+control_soil_sys = control_soil_sys.control_soil_sys(WATER_PIN, BUTTON_PUMP, M0ISTURE_SOIL_SENSOR_PIN, ECHO_PIN, TRIG_PIN, WATER_LEVEL_MIN)
+
+print("target 1.3")
+
+print("target 1.4")
+
 # Misura delle condizioni iniziali
 habitat_param.check_habitat_status(temp_constraint.get_ref_value(), humid_constraint.get_ref_value())
 moist_sens = control_soil_sys.get_moist_sens()
-
 prev_temp = habitat_param.get_habitat_temperature()
 prev_humid = habitat_param.get_habitat_humidity()
-prev_moisture = moist_sens.read_moisture_value()
+prev_moisture = control_soil_sys.get_moist_sens()
 
 print("Measuring weather conditions... ", end="")
 
-def publish_water_level():
-    water_level = control_sys.get_water_level()
-    client.publish(MQTT_TOPIC_WATER_LEV, str(water_level))
-    print(f"Pubblicato livello dell'acqua: {water_level}% su topic {MQTT_TOPIC_WATER_LEV}")
-
-# Funzione per pubblicare solo un messaggio sull'attivazione della ventola sul topic MQTT
-def publish_fan_activation():
-    fan_active = fan_controller.is_fan_active()
-    message = "Fan is active" if fan_active else "Fan is not active"
-    client.publish(MQTT_TOPIC_FAN_ACT, message)
-    print(f"Pubblicato stato della ventola: '{message}' su topic {MQTT_TOPIC_FAN_ACT}")
+print("target 3")
 
 while True:
-
-    #  parte aggiunte per nodered il 26
-    publish_water_level()
-    publish_fan_activation()
     # Controllo delle luci notturne
     night_led.check_night()
 
@@ -163,20 +158,15 @@ while True:
         menu.display_allarmed(habitat_status)
     else:
         menu.display_data(habitat_status)
-
+    print("target 4")
     # Pubblicazione delle misure su MQTT
     curr_temp = habitat_param.get_habitat_temperature()
     curr_humid = habitat_param.get_habitat_humidity()
     curr_moist = moist_sens.read_moisture_value()
-    """chiedere a rago"""
 
     message_temp = ujson.dumps(curr_temp)
     message_humid = ujson.dumps(curr_humid)
     message_moist = ujson.dumps(curr_moist)
-
-    #  parte aggiunte per nodered il 26
-    message_check_temp = ujson.dumps(habitat_status["temp_status"])
-    message_check_hum = ujson.dumps(habitat_status["hum_status"])
 
     # Pubblica la temperatura se è cambiata
     if curr_temp != prev_temp:
@@ -207,3 +197,4 @@ while True:
         client = connect_to_mqtt()
 
     time.sleep(1)
+

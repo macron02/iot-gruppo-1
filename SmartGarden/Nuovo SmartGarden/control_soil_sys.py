@@ -33,3 +33,6 @@ class control_soil_sys:
 
     def get_moist_sens(self):
         return self.moist_sens.soil_condition()
+
+     water_level = 100 - int((distance_mm / self.min_water) * 100)
+        return water_level
